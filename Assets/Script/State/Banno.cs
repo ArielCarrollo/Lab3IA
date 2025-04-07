@@ -1,6 +1,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using System.Linq;
 
 public class Banno : Humano
 {
@@ -22,24 +23,28 @@ public class Banno : Humano
 
     public override void Execute()
     {
-        timer += Time.deltaTime;
-
-        // Aliviar la necesidad gradualmente
-        _DataAgent.WC.value = Mathf.Lerp(_DataAgent.WC.value, 1f, Time.deltaTime * 2f);
-
-        // Si ha terminado o ya no necesita
-        if (timer >= bathroomTime || _DataAgent.WC.value >= 0.95f)
+        if (_DataAgent.IsMoving || !_Movement.IsDone()) // Solo ejecutar si llegó al baño
         {
-            _DataAgent.IsInBathroom = false; // Ya no está en el baño
+            base.Execute();
+            return;
+        }
 
-            // Verificar otras necesidades (excepto sueño, porque acaba de estar en el baño)
+        _DataAgent.WC.value = Mathf.Min(1f, _DataAgent.WC.value + 0.1f * Time.deltaTime);
+
+        if (_DataAgent.WC.value >= 0.95f)
+        {
+            _DataAgent.IsInBathroom = false;
+            _DataAgent.WC.value = 1f;
+
             if (_DataAgent.Energy.value < 0.3f)
             {
                 _StateMachine.ChangeState(TypeState.Comer);
+                MoveToNewLocation(Location.Comedor);
             }
             else
             {
                 _StateMachine.ChangeState(TypeState.Jugar);
+                MoveToNewLocation(Location.SalaDeJuegos);
             }
         }
 
@@ -51,5 +56,15 @@ public class Banno : Humano
         _DataAgent.IsInBathroom = false; // Por si acaso se sale de otro modo
         // Finalizar animación de baño
     }
+
+    private void MoveToNewLocation(Location newLocation)
+    {
+        var route = PathMap.routes[(Location.Banno, newLocation)];
+        List<Transform> transforms = route.Select(loc => WaypointManager.Instance.GetWaypoint(loc)).ToList();
+
+        // Iniciar movimiento hacia el nuevo destino
+        _Movement.FollowPath(transforms);
+    }
 }
+
 

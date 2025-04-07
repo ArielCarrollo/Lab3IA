@@ -29,15 +29,21 @@ public class DataAgent : MonoBehaviour
     public bool IsSleeping { get; set; }
     public bool IsInBathroom { get; set; } // Nueva propiedad para estado en baño
 
+    public bool IsInTransit { get; set; } // Nuevo flag para movimiento
+
+    public bool IsMoving { get; set; } // Nuevo flag para movimiento
+
     void Update()
     {
-        // Disminuir sueño con el tiempo (excepto cuando duerme o está en el baño)
+        if (IsMoving) return; // Si está en movimiento, no actualizar barras
+
+        // Disminuir sueño (solo si no está durmiendo/moviéndose)
         if (!IsSleeping && !IsInBathroom)
         {
             Sleep.value = Mathf.Max(0, Sleep.value - Time.deltaTime * 0.01f);
         }
 
-        // Aumentar necesidad de ir al baño con el tiempo (excepto cuando duerme)
+        // Aumentar necesidad de WC (solo si no está durmiendo/moviéndose)
         if (!IsSleeping)
         {
             WC.value = Mathf.Max(0, WC.value - Time.deltaTime * 0.02f);
@@ -90,25 +96,5 @@ public class DataAgent : MonoBehaviour
         Sleep.value = Sleep.valueMax;
         StopCoroutine(CoroutineSleep);
         CoroutineSleep = null;
-    }
-
-    // Métodos para el baño (similar a los anteriores)
-    public void UseBathroom()
-    {
-        if (CoroutineWC == null)
-            CoroutineWC = StartCoroutine(UseBathroomTime(WC.time));
-    }
-
-    IEnumerator UseBathroomTime(float time)
-    {
-        while (time > 0)
-        {
-            time--;
-            WC.value = Mathf.Lerp(WC.value, WC.valueMax, Time.deltaTime * 20f);
-            yield return new WaitForSecondsRealtime(1);
-        }
-        WC.value = WC.valueMax;
-        StopCoroutine(CoroutineWC);
-        CoroutineWC = null;
     }
 }
